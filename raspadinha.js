@@ -3,14 +3,13 @@ const canvas = document.getElementById('scratch-canvas');
 const ctx = canvas.getContext('2d');
 const scratchSound = document.getElementById('som-raspar');
 const prizeContent = document.querySelector('.prize-content');
-const prizeContainer = document.querySelector('.scratch-wrapper'); 
+const prizeContainer = document.querySelector('.scratch-wrapper');
 
 let isDrawing = false;
 let lastPosition = null;
 
 // ✨ Função para salvar o estado do Canvas na sessão
 function saveCanvasState() {
-    // Converte o Canvas em uma string de imagem (Data URL) e salva na sessão
     const dataURL = canvas.toDataURL();
     sessionStorage.setItem('canvasState', dataURL);
 }
@@ -18,26 +17,23 @@ function saveCanvasState() {
 // 2. Função para desenhar a camada "raspável" (A TINTA)
 function setupCanvas() {
     const silverGradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-    silverGradient.addColorStop(0, '#c0c0c0'); 
-    silverGradient.addColorStop(0.5, '#a9a9a9'); 
-    silverGradient.addColorStop(1, '#c0c0c0'); 
+    silverGradient.addColorStop(0, '#c0c0c0');
+    silverGradient.addColorStop(0.5, '#a9a9a9');
+    silverGradient.addColorStop(1, '#c0c0c0');
     ctx.fillStyle = silverGradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Texto "RASPE AQUI"
+
     const fontSize = canvas.height / 3;
     ctx.fillStyle = '#3f3020';
     ctx.font = `700 ${fontSize}px 'Oswald', sans-serif`;
-    ctx.textTransform = 'uppercase';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('RASPE AQUI', canvas.width / 2, canvas.height / 2);
 
-    // Salva o estado inicial
-    saveCanvasState(); 
+    saveCanvasState();
 }
 
-// 3. Funções para obter a posição (inalteradas)
+// 3. Funções para obter a posição
 function getMousePos(e) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -47,6 +43,7 @@ function getMousePos(e) {
         y: (e.clientY - rect.top) * scaleY
     };
 }
+
 function getTouchPos(e) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -57,27 +54,28 @@ function getTouchPos(e) {
     };
 }
 
-// 5. A função "raspar" (com "arranhado")
+// 4. Função de raspar
 function scratch(x, y) {
     ctx.globalCompositeOperation = 'destination-out';
     const scratchRadiusBase = canvas.width / 40;
     const scratchRandom = canvas.width / 25;
     for (let i = 0; i < 20; i++) {
-        const radius = scratchRadiusBase + Math.random() * (scratchRadiusBase / 2); 
-        const offsetX = Math.random() * scratchRandom - (scratchRandom / 2); 
+        const radius = scratchRadiusBase + Math.random() * (scratchRadiusBase / 2);
+        const offsetX = Math.random() * scratchRandom - (scratchRandom / 2);
         const offsetY = Math.random() * scratchRandom - (scratchRandom / 2);
         ctx.beginPath();
         ctx.arc(x + offsetX, y + offsetY, radius, 0, Math.PI * 2);
         ctx.fill();
     }
+    saveCanvasState();
 }
 
-// Função que desenha uma "linha de arranhões"
+// 5. Desenhar linha entre os pontos
 function drawScratchLine(from, to) {
     const dx = to.x - from.x;
     const dy = to.y - from.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const stepSize = canvas.width / 50; 
+    const stepSize = canvas.width / 50;
     if (distance < stepSize) {
         scratch(to.x, to.y);
         return;
@@ -91,33 +89,32 @@ function drawScratchLine(from, to) {
         scratch(x, y);
     }
     scratch(to.x, to.y);
-    
-    // Salva o estado após cada linha desenhada (para persistência)
-    saveCanvasState(); 
 }
 
-// --- Funções de controlo de som (inalteradas) ---
+// 6. Som
 function playSound() {
-    scratchSound.play().catch(e => console.warn("Som bloqueado pelo navegador."));
+    scratchSound.play().catch(() => {});
 }
 function stopSound() {
     scratchSound.pause();
     scratchSound.currentTime = 0;
 }
 
-// 6. Event Listeners
+// 7. Eventos de mouse e toque
 window.addEventListener('mouseup', () => {
     if (isDrawing) {
         isDrawing = false;
         stopSound();
         lastPosition = null;
+        isResizingAllowed = true;
     }
 });
 canvas.addEventListener('mousedown', (e) => {
     isDrawing = true;
+    isResizingAllowed = false;
     playSound();
-    lastPosition = getMousePos(e); 
-    scratch(lastPosition.x, lastPosition.y); 
+    lastPosition = getMousePos(e);
+    scratch(lastPosition.x, lastPosition.y);
 });
 canvas.addEventListener('mousemove', (e) => {
     if (!isDrawing) return;
@@ -130,43 +127,49 @@ canvas.addEventListener('mousemove', (e) => {
 canvas.addEventListener('mouseenter', (e) => {
     if (e.buttons === 1) {
         isDrawing = true;
+        isResizingAllowed = false;
         playSound();
         lastPosition = getMousePos(e);
     }
 });
 canvas.addEventListener('mouseout', () => {
     stopSound();
-    lastPosition = null; 
+    lastPosition = null;
 });
+
 canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault(); 
+    e.preventDefault();
     isDrawing = true;
+    isResizingAllowed = false;
     playSound();
     lastPosition = getTouchPos(e);
     scratch(lastPosition.x, lastPosition.y);
 }, { passive: false });
+
 canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
     if (!isDrawing) return;
     const currentPos = getTouchPos(e);
-    if(lastPosition){
+    if (lastPosition) {
         drawScratchLine(lastPosition, currentPos);
     }
     lastPosition = currentPos;
 }, { passive: false });
+
 canvas.addEventListener('touchend', () => {
     isDrawing = false;
     stopSound();
     lastPosition = null;
+    isResizingAllowed = true;
 });
 canvas.addEventListener('touchcancel', () => {
     isDrawing = false;
     stopSound();
     lastPosition = null;
+    isResizingAllowed = true;
 });
 
-
-// 7. LÓGICA DE URL (inalterada)
+// 8. Lógica de URL
 const urlParams = new URLSearchParams(window.location.search);
 const valorDoVale = urlParams.get('valor');
 if (valorDoVale) {
@@ -181,45 +184,40 @@ if (genero === 'a') {
     tituloElement.textContent = 'VOCÊ FOI PRESENTEADO COM UM VALE TATTOO';
 }
 
+// 9. Lógica de redimensionamento (versão mobile-safe)
+let isResizingAllowed = true;
 
-// 8. LÓGICA DE REDIMENSIONAMENTO E INICIALIZAÇÃO (Corrigida)
-function resizeAndSetupCanvas() {
+function resizeAndSetupCanvas(force = false) {
+    if (!isResizingAllowed && !force) return;
+
     const containerWidth = prizeContainer.clientWidth;
     const containerHeight = prizeContainer.clientHeight;
-    
-    // O Canvas é redimensionado AQUI (zerando o conteúdo)
+
     canvas.width = containerWidth;
     canvas.height = containerHeight;
-    
     prizeContent.style.visibility = 'visible';
-    
-    /* ✨ Lógica para carregar o estado salvo */
-    const savedCanvas = sessionStorage.getItem('canvasState');
 
+    const savedCanvas = sessionStorage.getItem('canvasState');
     if (savedCanvas) {
-        // Se houver dados salvos, carrega a imagem salva
         const img = new Image();
-        img.onload = function() {
-            // Desenha a imagem salva no Canvas redimensionado
+        img.onload = function () {
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         };
         img.src = savedCanvas;
     } else {
-        // Se for a primeira visita (ou sessão nova), desenha a tinta
         setupCanvas();
     }
 }
 
 function debounce(func, wait = 100) {
     let timeout;
-    return function(...args) {
+    return function (...args) {
         clearTimeout(timeout);
-        timeout = setTimeout(() => {
-            func.apply(this, args);
-        }, wait);
+        timeout = setTimeout(() => func.apply(this, args), wait);
     };
 }
-window.addEventListener('resize', debounce(resizeAndSetupCanvas));
 
-// 9. Iniciar:
-resizeAndSetupCanvas();
+window.addEventListener('resize', debounce(() => resizeAndSetupCanvas(), 150));
+
+// 10. Iniciar
+resizeAndSetupCanvas(true);
