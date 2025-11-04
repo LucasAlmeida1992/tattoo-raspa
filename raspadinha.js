@@ -8,6 +8,13 @@ const prizeContainer = document.querySelector('.scratch-wrapper');
 let isDrawing = false;
 let lastPosition = null;
 
+// ✨ NOVO: Função para salvar o estado do Canvas
+function saveCanvasState() {
+    // Converte o Canvas em uma string de imagem (Data URL) e salva na sessão
+    const dataURL = canvas.toDataURL();
+    sessionStorage.setItem('canvasState', dataURL);
+}
+
 // 2. Função para desenhar a camada "raspável" (A TINTA)
 function setupCanvas() {
     const silverGradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
@@ -25,9 +32,12 @@ function setupCanvas() {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('RASPE AQUI', canvas.width / 2, canvas.height / 2);
+
+    // Salva o estado inicial, caso o usuário atualize antes de começar a raspar
+    saveCanvasState(); 
 }
 
-// 3. Funções para obter a posição
+// 3. Funções para obter a posição (inalteradas)
 function getMousePos(e) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -49,8 +59,7 @@ function getTouchPos(e) {
 
 // 5. A função "raspar" (com "arranhado")
 function scratch(x, y) {
-    // ✨ NOVO: Salva que a raspadinha foi usada na sessão
-    sessionStorage.setItem('raspadinhaUsada', 'true');
+    // Não precisamos salvar aqui, vamos salvar no 'mousemove' / 'touchmove'
     
     ctx.globalCompositeOperation = 'destination-out';
     const scratchRadiusBase = canvas.width / 40;
@@ -84,9 +93,12 @@ function drawScratchLine(from, to) {
         scratch(x, y);
     }
     scratch(to.x, to.y);
+    
+    // ✨ Salva o estado após cada linha desenhada (para persistência)
+    saveCanvasState(); 
 }
 
-// --- Funções de controlo de som ---
+// --- Funções de controlo de som (inalteradas) ---
 function playSound() {
     scratchSound.play().catch(e => console.warn("Som bloqueado pelo navegador."));
 }
@@ -95,7 +107,7 @@ function stopSound() {
     scratchSound.currentTime = 0;
 }
 
-// 6. Event Listeners (inalterados)
+// 6. Event Listeners (inalterados, exceto a chamada para saveCanvasState)
 window.addEventListener('mouseup', () => {
     if (isDrawing) {
         isDrawing = false;
@@ -158,18 +170,13 @@ canvas.addEventListener('touchcancel', () => {
 
 // 7. LÓGICA DE URL (inalterada)
 const urlParams = new URLSearchParams(window.location.search);
-
-// --- Lógica do Valor ---
 const valorDoVale = urlParams.get('valor');
 if (valorDoVale) {
     const spanDoValor = document.getElementById('valor-premio');
     spanDoValor.textContent = `(Vale R$${valorDoVale})`;
 }
-
-// --- Lógica do Gênero ---
 const genero = urlParams.get('genero');
 const tituloElement = document.getElementById('titulo-presente');
-
 if (genero === 'a') {
     tituloElement.textContent = 'VOCÊ FOI PRESENTEADA COM UM VALE TATTOO';
 } else if (genero === 'o') {
@@ -187,14 +194,20 @@ function resizeAndSetupCanvas() {
     
     prizeContent.style.visibility = 'visible';
     
-    /* ✨ NOVA LÓGICA PARA EVITAR REDESENHAR NO REFRESH */
-    const raspadinhaJaUsada = sessionStorage.getItem('raspadinhaUsada');
+    /* ✨ NOVO: Lógica para carregar o estado salvo */
+    const savedCanvas = sessionStorage.getItem('canvasState');
 
-    if (!raspadinhaJaUsada) {
-        // Se AINDA NÃO foi usada (primeira visita ou fechou/abriu o navegador), desenha a tinta
+    if (savedCanvas) {
+        // Se houver dados salvos, carrega a imagem salva
+        const img = new Image();
+        img.onload = function() {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.src = savedCanvas;
+    } else {
+        // Se for a primeira visita (ou sessão nova), desenha a tinta
         setupCanvas();
     }
-    // Se JÁ foi usada, não faz nada (a área permanece raspada)
 }
 
 function debounce(func, wait = 100) {
