@@ -8,7 +8,7 @@ const prizeContainer = document.querySelector('.scratch-wrapper');
 let isDrawing = false;
 let lastPosition = null;
 
-// ✨ NOVO: Função para salvar o estado do Canvas
+// ✨ Função para salvar o estado do Canvas na sessão
 function saveCanvasState() {
     // Converte o Canvas em uma string de imagem (Data URL) e salva na sessão
     const dataURL = canvas.toDataURL();
@@ -33,7 +33,7 @@ function setupCanvas() {
     ctx.textBaseline = 'middle';
     ctx.fillText('RASPE AQUI', canvas.width / 2, canvas.height / 2);
 
-    // Salva o estado inicial, caso o usuário atualize antes de começar a raspar
+    // Salva o estado inicial
     saveCanvasState(); 
 }
 
@@ -59,8 +59,6 @@ function getTouchPos(e) {
 
 // 5. A função "raspar" (com "arranhado")
 function scratch(x, y) {
-    // Não precisamos salvar aqui, vamos salvar no 'mousemove' / 'touchmove'
-    
     ctx.globalCompositeOperation = 'destination-out';
     const scratchRadiusBase = canvas.width / 40;
     const scratchRandom = canvas.width / 25;
@@ -94,7 +92,7 @@ function drawScratchLine(from, to) {
     }
     scratch(to.x, to.y);
     
-    // ✨ Salva o estado após cada linha desenhada (para persistência)
+    // Salva o estado após cada linha desenhada (para persistência)
     saveCanvasState(); 
 }
 
@@ -107,7 +105,7 @@ function stopSound() {
     scratchSound.currentTime = 0;
 }
 
-// 6. Event Listeners (inalterados, exceto a chamada para saveCanvasState)
+// 6. Event Listeners
 window.addEventListener('mouseup', () => {
     if (isDrawing) {
         isDrawing = false;
@@ -189,18 +187,20 @@ function resizeAndSetupCanvas() {
     const containerWidth = prizeContainer.clientWidth;
     const containerHeight = prizeContainer.clientHeight;
     
+    // O Canvas é redimensionado AQUI (zerando o conteúdo)
     canvas.width = containerWidth;
     canvas.height = containerHeight;
     
     prizeContent.style.visibility = 'visible';
     
-    /* ✨ NOVO: Lógica para carregar o estado salvo */
+    /* ✨ Lógica para carregar o estado salvo */
     const savedCanvas = sessionStorage.getItem('canvasState');
 
     if (savedCanvas) {
         // Se houver dados salvos, carrega a imagem salva
         const img = new Image();
         img.onload = function() {
+            // Desenha a imagem salva no Canvas redimensionado
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         };
         img.src = savedCanvas;
