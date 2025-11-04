@@ -1,5 +1,3 @@
-// --- Documentação JavaScript (Design "Premium" - Correção de Transparência) ---
-
 // 1. Obter os Elementos
 const canvas = document.getElementById('scratch-canvas');
 const ctx = canvas.getContext('2d');
@@ -12,36 +10,24 @@ let lastPosition = null;
 
 // 2. Função para desenhar a camada "raspável" (A TINTA)
 function setupCanvas() {
-    
-    /* * MUDANÇA: CORREÇÃO DE TRANSPARÊNCIA
-     * A tinta agora é um gradiente prateado SÓLIDO (opaco).
-     * O 'rgba' semi-transparente estava a mostrar o prémio por baixo.
-     */
     const silverGradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-    silverGradient.addColorStop(0, '#c0c0c0'); // Prata (sólido)
-    silverGradient.addColorStop(0.5, '#a9a9a9'); // Cinza (sólido)
-    silverGradient.addColorStop(1, '#c0c0c0'); // Prata (sólido)
+    silverGradient.addColorStop(0, '#c0c0c0'); 
+    silverGradient.addColorStop(0.5, '#a9a9a9'); 
+    silverGradient.addColorStop(1, '#c0c0c0'); 
     ctx.fillStyle = silverGradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height); // Pinta a cor sólida
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // Texto "RASPE AQUI"
-    const fontSize = canvas.height / 3; // Ajustado para altura
-    
-    /* * MUDANÇA: Cor do texto "RASPE AQUI"
-     * Trocado para uma cor escura que aparece bem
-     * em cima do fundo prateado.
-     */
-    ctx.fillStyle = '#3f3020'; // Castanho escuro (para combinar com o design)
-    ctx.font = `700 ${fontSize}px 'Oswald', sans-serif`; // Fonte do título
-    ctx.textTransform = 'uppercase'; // Letras maiúsculas
-    
+    const fontSize = canvas.height / 3;
+    ctx.fillStyle = '#3f3020';
+    ctx.font = `700 ${fontSize}px 'Oswald', sans-serif`;
+    ctx.textTransform = 'uppercase';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('RASPE AQUI', canvas.width / 2, canvas.height / 2);
 }
 
 // 3. Funções para obter a posição
-// (Sem alteração)
 function getMousePos(e) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -62,8 +48,10 @@ function getTouchPos(e) {
 }
 
 // 5. A função "raspar" (com "arranhado")
-// (Sem alteração)
 function scratch(x, y) {
+    // ✨ NOVO: Salva que a raspadinha foi usada na sessão
+    sessionStorage.setItem('raspadinhaUsada', 'true');
+    
     ctx.globalCompositeOperation = 'destination-out';
     const scratchRadiusBase = canvas.width / 40;
     const scratchRandom = canvas.width / 25;
@@ -78,7 +66,6 @@ function scratch(x, y) {
 }
 
 // Função que desenha uma "linha de arranhões"
-// (Sem alteração)
 function drawScratchLine(from, to) {
     const dx = to.x - from.x;
     const dy = to.y - from.y;
@@ -100,7 +87,6 @@ function drawScratchLine(from, to) {
 }
 
 // --- Funções de controlo de som ---
-// (Sem alteração)
 function playSound() {
     scratchSound.play().catch(e => console.warn("Som bloqueado pelo navegador."));
 }
@@ -109,8 +95,7 @@ function stopSound() {
     scratchSound.currentTime = 0;
 }
 
-// 6. Event Listeners (com 'mouseup' na 'window')
-// (Sem alteração - está a usar a última correção)
+// 6. Event Listeners (inalterados)
 window.addEventListener('mouseup', () => {
     if (isDrawing) {
         isDrawing = false;
@@ -171,8 +156,7 @@ canvas.addEventListener('touchcancel', () => {
 });
 
 
-// 7. LÓGICA DE URL
-// (Sem alteração)
+// 7. LÓGICA DE URL (inalterada)
 const urlParams = new URLSearchParams(window.location.search);
 
 // --- Lógica do Valor ---
@@ -182,23 +166,18 @@ if (valorDoVale) {
     spanDoValor.textContent = `(Vale R$${valorDoVale})`;
 }
 
-// --- ✨ MUDANÇA AQUI: Lógica do Gênero ---
-const genero = urlParams.get('genero'); // Pega o ?genero=
+// --- Lógica do Gênero ---
+const genero = urlParams.get('genero');
 const tituloElement = document.getElementById('titulo-presente');
 
 if (genero === 'a') {
-    // Se for 'a' (feminino)
     tituloElement.textContent = 'VOCÊ FOI PRESENTEADA COM UM VALE TATTOO';
 } else if (genero === 'o') {
-    // Se for 'o' (masculino)
     tituloElement.textContent = 'VOCÊ FOI PRESENTEADO COM UM VALE TATTOO';
 }
-// Se o parâmetro 'genero' não existir ou for diferente, 
-// ele simplesmente mantém o texto original "PRESENTEADO(A)".
 
 
-// 8. LÓGICA DE REDIMENSIONAMENTO
-// (Sem alteração)
+// 8. LÓGICA DE REDIMENSIONAMENTO E INICIALIZAÇÃO (Corrigida)
 function resizeAndSetupCanvas() {
     const containerWidth = prizeContainer.clientWidth;
     const containerHeight = prizeContainer.clientHeight;
@@ -206,9 +185,18 @@ function resizeAndSetupCanvas() {
     canvas.width = containerWidth;
     canvas.height = containerHeight;
     
-    setupCanvas();
     prizeContent.style.visibility = 'visible';
+    
+    /* ✨ NOVA LÓGICA PARA EVITAR REDESENHAR NO REFRESH */
+    const raspadinhaJaUsada = sessionStorage.getItem('raspadinhaUsada');
+
+    if (!raspadinhaJaUsada) {
+        // Se AINDA NÃO foi usada (primeira visita ou fechou/abriu o navegador), desenha a tinta
+        setupCanvas();
+    }
+    // Se JÁ foi usada, não faz nada (a área permanece raspada)
 }
+
 function debounce(func, wait = 100) {
     let timeout;
     return function(...args) {
@@ -221,5 +209,4 @@ function debounce(func, wait = 100) {
 window.addEventListener('resize', debounce(resizeAndSetupCanvas));
 
 // 9. Iniciar:
-// (Sem alteração)
 resizeAndSetupCanvas();
